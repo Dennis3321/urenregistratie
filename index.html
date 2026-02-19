@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UrenTracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a18;
+    --paper: #f5f2eb;
+    --warm: #f0ebe0;
+    --accent: #c84b2f;
+    --accent2: #2e6b4f;
+    --muted: #8a8578;
+    --border: #d4cfc4;
+    --highlight: #fff8e7;
+    --shadow: rgba(26,26,24,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* ── LOGIN ─────────────────────────────────── */
+  #login-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--ink);
+    position: relative;
+    overflow: hidden;
+  }
+  #login-screen::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(255,255,255,0.04) 39px,
+      rgba(255,255,255,0.04) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      rgba(255,255,255,0.04) 39px,
+      rgba(255,255,255,0.04) 40px
+    );
+  }
+  .login-card {
+    background: var(--paper);
+    padding: 56px 48px;
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 0 100%);
+  }
+  .login-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 42px;
+    font-weight: 300;
+    line-height: 1;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
+  }
+  .login-logo span { color: var(--accent); }
+  .login-sub {
+    color: var(--muted);
+    margin-bottom: 40px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .btn-google {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .btn-google:hover { background: #333; }
+  .btn-google svg { flex-shrink: 0; }
+  .setup-note {
+    margin-top: 24px;
+    padding: 16px;
+    background: var(--warm);
+    border-left: 3px solid var(--accent);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .setup-note strong { color: var(--ink); }
+
+  /* ── APP SHELL ──────────────────────────────── */
+  #app { display: none; min-height: 100vh; }
+
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 300;
+    letter-spacing: -1px;
+  }
+  .header-logo span { color: var(--accent); }
+  .header-nav { display: flex; gap: 0; }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: rgba(245,242,235,0.5);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 16px;
+    height: 56px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+  .nav-btn:hover { color: var(--paper); }
+  .nav-btn.active { color: var(--paper); border-bottom-color: var(--accent); }
+  .header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: rgba(245,242,235,0.6);
+  }
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .btn-logout {
+    background: none;
+    border: 1px solid rgba(245,242,235,0.2);
+    color: rgba(245,242,235,0.5);
+    padding: 4px 10px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    transition: all 0.2s;
+  }
+  .btn-logout:hover { border-color: var(--paper); color: var(--paper); }
+
+  /* ── VIEWS ──────────────────────────────────── */
+  .view { display: none; padding: 32px; max-width: 1100px; margin: 0 auto; }
+  .view.active { display: block; }
+
+  .view-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .view-title {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 300;
+    letter-spacing: -1px;
+  }
+
+  /* ── MONTH PICKER ───────────────────────────── */
+  .month-picker {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .month-picker button {
+    background: none;
+    border: 1px solid var(--border);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .month-picker button:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+  .month-label { font-size: 14px; min-width: 140px; text-align: center; }
+
+  /* ── TIMESHEET TABLE ────────────────────────── */
+  .timesheet-wrapper {
+    background: white;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  th.center { text-align: center; }
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.weekend { background: var(--warm); }
+  tr.weekend td { color: var(--muted); }
+  tr:not(.weekend):hover { background: var(--highlight); }
+
+  .day-label { white-space: nowrap; }
+  .day-num { color: var(--muted); font-size: 11px; margin-left: 6px; }
+
+  select, input[type="number"], input[type="text"] {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px 6px;
+    width: 100%;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  select:focus, input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+  }
+  input[type="number"] {
+    text-align: right;
+    width: 60px;
+  }
+  .row-total { font-weight: 500; text-align: right; padding-right: 12px; }
+  .col-total { font-weight: 500; text-align: right; font-size: 12px; }
+
+  tfoot td {
+    background: var(--warm);
+    padding: 10px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    border-top: 2px solid var(--border);
+  }
+
+  /* status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .status-draft { background: var(--warm); color: var(--muted); }
+  .status-submitted { background: #e8f0fe; color: #1a73e8; }
+  .status-approved { background: #e6f4ea; color: var(--accent2); }
+  .status-rejected { background: #fce8e6; color: var(--accent); }
+
+  /* ── BUTTONS ────────────────────────────────── */
+  .btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #333; }
+  .btn-success { background: var(--accent2); color: white; }
+  .btn-success:hover { opacity: 0.9; }
+  .btn-danger { background: var(--accent); color: white; }
+  .btn-danger:hover { opacity: 0.9; }
+  .btn-outline {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--ink);
+  }
+  .btn-outline:hover { border-color: var(--ink); }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; align-items: center; }
+
+  /* ── APPROVAL VIEW ──────────────────────────── */
+  .approval-grid { display: grid; gap: 12px; }
+  .approval-card {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 16px;
+  }
+  .approval-card:hover { border-color: var(--ink); }
+  .approval-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .approval-name { font-size: 15px; font-family: 'Fraunces', serif; font-weight: 600; }
+  .approval-hours { font-size: 24px; font-family: 'Fraunces', serif; font-weight: 300; text-align: right; }
+  .approval-hours span { font-size: 12px; color: var(--muted); }
+
+  /* ── INVOICE VIEW ───────────────────────────── */
+  .invoice-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+    background: white;
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+  .form-control {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  .form-control:focus { outline: none; border-color: var(--accent); }
+
+  .invoice-preview {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 40px;
+  }
+  .inv-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 3px solid var(--ink);
+  }
+  .inv-title {
+    font-family: 'Fraunces', serif;
+    font-size: 48px;
+    font-weight: 300;
+    letter-spacing: -2px;
+    color: var(--ink);
+  }
+  .inv-meta { font-size: 12px; line-height: 2; }
+  .inv-meta strong { color: var(--muted); font-weight: 400; text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
+  .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .inv-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .inv-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .inv-table tfoot td {
+    border-top: 2px solid var(--ink);
+    border-bottom: none;
+    font-weight: 500;
+    background: var(--warm);
+  }
+  .inv-total-row { font-size: 18px; font-family: 'Fraunces', serif; }
+
+  /* ── OVERVIEW ───────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+  .stat-val {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .stat-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-top: 6px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state .big { font-family: 'Fraunces', serif; font-size: 48px; font-weight: 300; opacity: 0.3; }
+
+  /* ── TOAST ──────────────────────────────────── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 20px;
+    font-size: 12px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+    max-width: 320px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: var(--accent); }
+  #toast.success { background: var(--accent2); }
+
+  /* ── CONFIG MODAL ───────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,26,24,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--paper);
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 300; margin-bottom: 24px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+  @media print {
+    header, .view-header .actions, #toast, .nav-btn, .modal-overlay { display: none !important; }
+    .invoice-preview { border: none; padding: 0; }
+    .view { padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Uren<span>.</span></div>
+    <div class="login-sub">Urenregistratie systeem</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
+        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+        <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
+        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/>
+      </svg>
+      Inloggen met Google
+    </button>
+    <div class="setup-note">
+      <strong>Configuratie vereist:</strong> Stel <code>CONFIG.CLIENT_ID</code> en <code>CONFIG.SHEET_ID</code> in de broncode in.
+      Zie de <a href="#" onclick="showConfigHelp()">setup handleiding</a>.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════════ -->
+<div id="app">
+  <header>
+    <div class="header-logo">Uren<span>.</span></div>
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showView('timesheet', this)">Urenstaat</button>
+      <button class="nav-btn" onclick="showView('overview', this)" id="nav-overview">Overzicht</button>
+      <button class="nav-btn" id="nav-approval" onclick="showView('approval', this)" style="display:none">Goedkeuring</button>
+      <button class="nav-btn" onclick="showView('invoice', this)">Factuur</button>
+    </nav>
+    <div class="header-user">
+      <div class="user-avatar" id="user-initials">?</div>
+      <span id="user-name">...</span>
+      <button class="btn-logout" onclick="signOut()">Uitloggen</button>
+    </div>
+  </header>
+
+  <!-- URENSTAAT -->
+  <div class="view active" id="view-timesheet">
+    <div class="view-header">
+      <div>
+        <div class="view-title">Urenstaat</div>
+      </div>
+      <div class="month-picker">
+        <button onclick="changeMonth(-1)">◂</button>
+        <div class="month-label" id="month-label">—</div>
+        <button onclick="changeMonth(1)">▸</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <div id="sheet-status" class="status-badge status-draft">● Concept</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline btn-sm" onclick="loadTimesheet()">↺ Verversen</button>
+        <button class="btn btn-outline btn-sm" onclick="saveTimesheet()">Opslaan</button>
+        <button class="btn btn-primary btn-sm" onclick="submitTimesheet()" id="btn-submit">Indienen ter goedkeuring</button>
+      </div>
+    </div>
+
+    <div class="timesheet-wrapper">
+      <table id="timesheet-table">
+        <thead>
+          <tr>
+            <th>Dag</th>
+            <th>Opdracht / Project</th>
+            <th class="center">Uren</th>
+            <th>Type</th>
+            <th>Omschrijving</th>
+            <th class="center">Totaal</th>
+          </tr>
+        </thead>
+        <tbody id="timesheet-body"></tbody>
+        <tfoot id="timesheet-foot"></tfoot>
+      </table>
+    </div>
+
+    <div class="actions" style="margin-top:16px;">
+      <span style="font-size:11px;color:var(--muted);">Wijzigingen worden lokaal bewaard. Klik 'Opslaan' om naar Google Sheets te schrijven.</span>
+    </div>
+  </div>
+
+  <!-- OVERZICHT -->
+  <div class="view" id="view-overview">
+    <div class="view-header">
+      <div class="view-title">Overzicht</div>
+      <div class="month-picker">
+        <button onclick="changeMonth(-1, true)">◂</button>
+        <div class="month-label" id="month-label-ov">—</div>
+        <button onclick="changeMonth(1, true)">▸</button>
+      </div>
+    </div>
+    <div class="stats-row" id="overview-stats"></div>
+    <div id="overview-table-wrap"></div>
+  </div>
+
+  <!-- GOEDKEURING -->
+  <div class="view" id="view-approval">
+    <div class="view-header">
+      <div class="view-title">Goedkeuring</div>
+      <div class="month-picker">
+        <button onclick="changeMonth(-1, false, true)">◂</button>
+        <div class="month-label" id="month-label-ap">—</div>
+        <button onclick="changeMonth(1, false, true)">▸</button>
+      </div>
+    </div>
+    <div class="approval-grid" id="approval-list">
+      <div class="empty-state"><div class="big">✓</div><div>Geen ingediende urenlijsten</div></div>
+    </div>
+  </div>
+
+  <!-- FACTUUR -->
+  <div class="view" id="view-invoice">
+    <div class="view-header">
+      <div class="view-title">Factuur genereren</div>
+    </div>
+    <div class="invoice-controls">
+      <div class="form-group">
+        <label class="form-label">Klant / Opdracht</label>
+        <select class="form-control" id="inv-client" onchange="generateInvoice()">
+          <option value="">— selecteer —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Medewerker</label>
+        <select class="form-control" id="inv-employee" onchange="generateInvoice()">
+          <option value="">— alle medewerkers —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Van</label>
+        <input type="month" class="form-control" id="inv-from" onchange="generateInvoice()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tot en met</label>
+        <input type="month" class="form-control" id="inv-to" onchange="generateInvoice()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Factuurnummer</label>
+        <input type="text" class="form-control" id="inv-num" placeholder="2025-001" oninput="updateInvNum()">
+      </div>
+    </div>
+    <div class="actions" style="margin-top:0; margin-bottom:20px;">
+      <button class="btn btn-primary" onclick="window.print()">⎙ Afdrukken / PDF</button>
+    </div>
+    <div class="invoice-preview" id="invoice-preview">
+      <div class="empty-state"><div class="big">€</div><div>Selecteer een klant en periode</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIG HELP MODAL -->
+<div class="modal-overlay" id="config-modal">
+  <div class="modal">
+    <h2>Setup handleiding</h2>
+    <p style="line-height:1.7;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--ink);display:block;margin-bottom:8px;">1. Google Cloud Console</strong>
+      Maak een nieuw project aan op <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>.
+      Activeer de <em>Google Sheets API</em> en <em>Google Identity Services</em>.
+      Maak een OAuth 2.0 Client ID aan (type: Web application).
+      Voeg je domein toe als Authorized JavaScript Origin.
+      <br><br>
+      <strong style="color:var(--ink);display:block;margin-bottom:8px;">2. Google Sheets structuur</strong>
+      Maak een nieuw Google Sheets bestand aan met de volgende tabbladen:<br>
+      <code style="background:var(--warm);padding:2px 6px;display:block;margin:6px 0">
+        Uren | Medewerkers | Opdrachten | Tarieven
+      </code>
+      Zie de README voor de exacte kolomindeling.
+      <br><br>
+      <strong style="color:var(--ink);display:block;margin-bottom:8px;">3. Configuratie in broncode</strong>
+      Stel in de <code>CONFIG</code> sectie in:<br>
+      <code style="background:var(--warm);padding:6px 10px;display:block;margin:6px 0;font-size:11px;">
+        CLIENT_ID: "jouw-client-id.apps.googleusercontent.com"<br>
+        SHEET_ID: "jouw-spreadsheet-id"<br>
+        ADMIN_EMAILS: ["manager@bedrijf.nl"]
+      </code>
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="document.getElementById('config-modal').classList.remove('open')">Sluiten</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════ -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ─── CONFIGURATIE ─────────────────────────────────────────────
+const CONFIG = {
+  CLIENT_ID:    "JOUW_CLIENT_ID.apps.googleusercontent.com",  // ← aanpassen
+  SHEET_ID:     "JOUW_SHEET_ID",                               // ← aanpassen
+  ADMIN_EMAILS: ["manager@jouwbedrijf.nl"],                    // ← aanpassen
+  SCOPES:       "https://www.googleapis.com/auth/spreadsheets",
+
+  // Tabblad namen in Google Sheets
+  SHEETS: {
+    UREN:        "Uren",
+    MEDEWERKERS: "Medewerkers",
+    OPDRACHTEN:  "Opdrachten",
+    TARIEVEN:    "Tarieven"
+  }
+};
+// ─────────────────────────────────────────────────────────────
+
+// State
+let state = {
+  user: null,
+  accessToken: null,
+  isManager: false,
+  currentYear: new Date().getFullYear(),
+  currentMonth: new Date().getMonth(), // 0-indexed
+  timesheetData: {},   // { "YYYY-MM-DD": { project, hours, type, note } }
+  timesheetStatus: "draft",
+  projects: [],
+  employees: [],
+  rates: {},           // { employee_email: rate }
+  allEntries: []       // alle uren uit Sheets
+};
+
+const TYPES = ["Opdracht", "Verlof", "Ziek", "Feestdag", "Overig"];
+const DAYS_NL = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
+const MONTHS_NL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+
+// ─── AUTH ────────────────────────────────────────────────────
+
+function signInWithGoogle() {
+  if (CONFIG.CLIENT_ID.startsWith("JOUW")) {
+    toast("Stel eerst CLIENT_ID in in de broncode.", "error"); return;
+  }
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: CONFIG.CLIENT_ID,
+    scope: CONFIG.SCOPES,
+    callback: (resp) => {
+      if (resp.error) { toast("Login mislukt: " + resp.error, "error"); return; }
+      state.accessToken = resp.access_token;
+      fetchUserInfo();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: "Bearer " + state.accessToken }
+    });
+    const u = await r.json();
+    state.user = u;
+    state.isManager = CONFIG.ADMIN_EMAILS.includes(u.email);
+    initApp();
+  } catch(e) { toast("Kon gebruikersinfo niet ophalen.", "error"); }
+}
+
+function signOut() {
+  google.accounts.oauth2.revoke(state.accessToken);
+  state.user = null; state.accessToken = null;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+  toast("Uitgelogd.");
+}
+
+// ─── APP INIT ────────────────────────────────────────────────
+
+async function initApp() {
+  document.getElementById("login-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
+  const initials = (state.user.name||"?").split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+  document.getElementById("user-initials").textContent = initials;
+  document.getElementById("user-name").textContent = state.user.name;
+
+  if (state.isManager) {
+    document.getElementById("nav-approval").style.display = "inline-block";
+  }
+
+  await loadMeta();
+  renderTimesheet();
+  updateMonthLabels();
+}
+
+async function loadMeta() {
+  try {
+    const [projData, empData, rateData] = await Promise.all([
+      sheetsGet(CONFIG.SHEETS.OPDRACHTEN + "!A2:C"),
+      sheetsGet(CONFIG.SHEETS.MEDEWERKERS + "!A2:C"),
+      sheetsGet(CONFIG.SHEETS.TARIEVEN + "!A2:B")
+    ]);
+    state.projects = (projData.values || []).map(r => ({ id: r[0], name: r[1]||r[0], client: r[2]||"" }));
+    state.employees = (empData.values || []).map(r => ({ email: r[0], name: r[1]||r[0], role: r[2]||"" }));
+    state.rates = {};
+    (rateData.values || []).forEach(r => { state.rates[r[0]] = parseFloat(r[1])||0; });
+
+    populateInvoiceControls();
+  } catch(e) {
+    console.warn("Kon meta niet laden:", e);
+    state.projects = [{ id: "demo", name: "Demo Project", client: "Demo Klant" }];
+    state.employees = [{ email: state.user?.email, name: state.user?.name, role: "medewerker" }];
+  }
+}
+
+// ─── GOOGLE SHEETS API ───────────────────────────────────────
+
+async function sheetsGet(range) {
+  if (CONFIG.SHEET_ID.startsWith("JOUW")) return { values: [] };
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}`;
+  const r = await fetch(url, { headers: { Authorization: "Bearer " + state.accessToken } });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function sheetsAppend(range, values) {
+  if (CONFIG.SHEET_ID.startsWith("JOUW")) { toast("Demo-modus: opslaan gesimuleerd."); return; }
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+  await fetch(url, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + state.accessToken, "Content-Type": "application/json" },
+    body: JSON.stringify({ values })
+  });
+}
+
+async function sheetsBatchUpdate(data) {
+  if (CONFIG.SHEET_ID.startsWith("JOUW")) { toast("Demo-modus: update gesimuleerd."); return; }
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values:batchUpdate`;
+  await fetch(url, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + state.accessToken, "Content-Type": "application/json" },
+    body: JSON.stringify({ valueInputOption: "USER_ENTERED", data })
+  });
+}
+
+// ─── TIMESHEET RENDER ────────────────────────────────────────
+
+function getDaysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+
+function renderTimesheet() {
+  const { currentYear: y, currentMonth: m } = state;
+  const days = getDaysInMonth(y, m);
+  const tbody = document.getElementById("timesheet-body");
+  const tfoot = document.getElementById("timesheet-foot");
+  tbody.innerHTML = "";
+
+  let totalHours = 0;
+  const typeTotals = {};
+
+  for (let d = 1; d <= days; d++) {
+    const date = new Date(y, m, d);
+    const dow = date.getDay(); // 0=Sun, 6=Sat
+    const isWeekend = dow === 0 || dow === 6;
+    const dateStr = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const entry = state.timesheetData[dateStr] || {};
+
+    const tr = document.createElement("tr");
+    if (isWeekend) tr.classList.add("weekend");
+
+    const defaultHours = isWeekend ? 0 : 8;
+
+    tr.innerHTML = `
+      <td class="day-label">${DAYS_NL[dow]} <span class="day-num">${d}</span></td>
+      <td>
+        <select onchange="updateEntry('${dateStr}','project',this.value)" ${isWeekend?"disabled":""}>
+          <option value="">—</option>
+          ${state.projects.map(p=>`<option value="${p.id}" ${entry.project===p.id?"selected":""}>${p.name}</option>`).join("")}
+        </select>
+      </td>
+      <td style="text-align:center">
+        <input type="number" min="0" max="24" step="0.5"
+          value="${entry.hours !== undefined ? entry.hours : (isWeekend ? 0 : "")}"
+          onchange="updateEntry('${dateStr}','hours',parseFloat(this.value)||0)"
+          ${isWeekend?"disabled":""}
+          style="width:56px">
+      </td>
+      <td>
+        <select onchange="updateEntry('${dateStr}','type',this.value)" ${isWeekend?"disabled":""}>
+          ${TYPES.map(t=>`<option value="${t}" ${entry.type===t?"selected":""}>${t}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <input type="text" placeholder="Omschrijving…"
+          value="${entry.note||""}"
+          onchange="updateEntry('${dateStr}','note',this.value)"
+          ${isWeekend?"disabled":""}
+          style="min-width:150px">
+      </td>
+      <td class="row-total">${entry.hours !== undefined ? entry.hours : (isWeekend ? 0 : "")}</td>
+    `;
+    tbody.appendChild(tr);
+
+    const h = entry.hours !== undefined ? entry.hours : 0;
+    totalHours += h;
+    if (!isWeekend && entry.type) typeTotals[entry.type] = (typeTotals[entry.type]||0) + h;
+  }
+
+  // Footer
+  const typeStr = Object.entries(typeTotals).map(([k,v])=>`${k}: <strong>${v}u</strong>`).join("  ·  ");
+  tfoot.innerHTML = `
+    <tr>
+      <td colspan="2">${typeStr}</td>
+      <td></td>
+      <td></td>
+      <td style="text-align:right;color:var(--muted)">Totaal</td>
+      <td class="col-total">${totalHours}u</td>
+    </tr>
+  `;
+}
+
+function updateEntry(date, field, value) {
+  if (!state.timesheetData[date]) state.timesheetData[date] = {};
+  state.timesheetData[date][field] = value;
+  // update total cell
+  const entry = state.timesheetData[date];
+  const rows = document.querySelectorAll("#timesheet-body tr");
+  const day = parseInt(date.split("-")[2]);
+  const row = rows[day - 1];
+  if (row) {
+    const totalCell = row.querySelector(".row-total");
+    if (totalCell) totalCell.textContent = entry.hours || 0;
+  }
+  renderFooter();
+}
+
+function renderFooter() {
+  const { currentYear: y, currentMonth: m } = state;
+  const days = getDaysInMonth(y, m);
+  let total = 0;
+  const typeTotals = {};
+  for (let d = 1; d <= days; d++) {
+    const dateStr = `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const entry = state.timesheetData[dateStr] || {};
+    const dow = new Date(y, m, d).getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const h = entry.hours || 0;
+    total += h;
+    if (!isWeekend && entry.type) typeTotals[entry.type] = (typeTotals[entry.type]||0) + h;
+  }
+  const typeStr = Object.entries(typeTotals).map(([k,v])=>`${k}: <strong>${v}u</strong>`).join("  ·  ");
+  document.getElementById("timesheet-foot").innerHTML = `
+    <tr>
+      <td colspan="2">${typeStr}</td>
+      <td></td>
+      <td></td>
+      <td style="text-align:right;color:var(--muted)">Totaal</td>
+      <td class="col-total">${total}u</td>
+    </tr>`;
+}
+
+// ─── LOAD / SAVE TIMESHEET ───────────────────────────────────
+
+async function loadTimesheet() {
+  const { currentYear: y, currentMonth: m, user } = state;
+  const monthStr = `${y}-${String(m+1).padStart(2,"0")}`;
+  try {
+    const data = await sheetsGet(CONFIG.SHEETS.UREN + "!A2:H");
+    state.timesheetData = {};
+    let status = "draft";
+    (data.values || []).forEach(row => {
+      const [date, email, project, hours, type, note, st] = row;
+      if (email === user?.email && date?.startsWith(monthStr)) {
+        state.timesheetData[date] = { project, hours: parseFloat(hours)||0, type, note: note||"" };
+        if (st) status = st;
+      }
+    });
+    state.timesheetStatus = status;
+    updateStatusBadge();
+    renderTimesheet();
+    toast("Urenstaat geladen.");
+  } catch(e) { toast("Laden mislukt: " + e.message, "error"); }
+}
+
+async function saveTimesheet() {
+  const { currentYear: y, currentMonth: m, user } = state;
+  const monthStr = `${y}-${String(m+1).padStart(2,"0")}`;
+  const rows = [];
+  for (const [date, entry] of Object.entries(state.timesheetData)) {
+    if (!date.startsWith(monthStr)) continue;
+    rows.push([date, user.email, entry.project||"", entry.hours||0, entry.type||"Opdracht", entry.note||"", state.timesheetStatus]);
+  }
+  if (rows.length === 0) { toast("Geen gegevens om op te slaan."); return; }
+
+  // In echt: eerst bestaande rijen verwijderen, dan appenden.
+  // Simplified: append (je kunt in Sheets duplicaten handmatig opruimen of Apps Script gebruiken)
+  await sheetsAppend(CONFIG.SHEETS.UREN + "!A:H", rows);
+  toast("Opgeslagen in Google Sheets.", "success");
+}
+
+async function submitTimesheet() {
+  state.timesheetStatus = "submitted";
+  updateStatusBadge();
+  await saveTimesheet();
+  document.getElementById("btn-submit").disabled = true;
+  document.getElementById("btn-submit").textContent = "Ingediend ✓";
+  toast("Urenstaat ingediend ter goedkeuring.", "success");
+}
+
+function updateStatusBadge() {
+  const badge = document.getElementById("sheet-status");
+  const map = {
+    draft: ["status-draft","● Concept"],
+    submitted: ["status-submitted","● Ingediend"],
+    approved: ["status-approved","✓ Goedgekeurd"],
+    rejected: ["status-rejected","✗ Afgewezen"]
+  };
+  badge.className = "status-badge " + (map[state.timesheetStatus]?.[0] || "status-draft");
+  badge.textContent = map[state.timesheetStatus]?.[1] || state.timesheetStatus;
+}
+
+// ─── APPROVAL VIEW ───────────────────────────────────────────
+
+async function loadApproval() {
+  const { currentYear: y, currentMonth: m } = state;
+  const monthStr = `${y}-${String(m+1).padStart(2,"0")}`;
+  const container = document.getElementById("approval-list");
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:20px">Laden…</div>';
+
+  try {
+    const data = await sheetsGet(CONFIG.SHEETS.UREN + "!A2:H");
+    const byEmployee = {};
+    (data.values || []).forEach(row => {
+      const [date, email, project, hours, type, note, status] = row;
+      if (!date?.startsWith(monthStr)) return;
+      if (!byEmployee[email]) byEmployee[email] = { hours:0, status:"draft", rows:[] };
+      byEmployee[email].hours += parseFloat(hours)||0;
+      byEmployee[email].status = status || "draft";
+      byEmployee[email].rows.push(row);
+    });
+
+    const submitted = Object.entries(byEmployee).filter(([,v])=>v.status==="submitted");
+    if (submitted.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="big">✓</div><div>Geen ingediende urenlijsten</div></div>';
+      return;
+    }
+
+    container.innerHTML = submitted.map(([email, val]) => {
+      const emp = state.employees.find(e=>e.email===email) || { name: email };
+      return `
+        <div class="approval-card">
+          <div>
+            <div class="approval-name">${emp.name}</div>
+            <div class="approval-meta">${email} · ${monthStr}</div>
+          </div>
+          <div class="approval-hours">${val.hours}<span>u</span></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-success btn-sm" onclick="approveEmployee('${email}','${monthStr}')">✓ Goedkeuren</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectEmployee('${email}','${monthStr}')">✗ Afwijzen</button>
+          </div>
+        </div>`;
+    }).join("");
+  } catch(e) { container.innerHTML = `<div class="empty-state">Fout: ${e.message}</div>`; }
+}
+
+async function approveEmployee(email, monthStr) {
+  toast(`Uren van ${email} goedgekeurd.`, "success");
+  // In productie: update status kolom via Sheets API batchUpdate
+  await loadApproval();
+}
+async function rejectEmployee(email, monthStr) {
+  toast(`Uren van ${email} afgewezen.`, "error");
+  await loadApproval();
+}
+
+// ─── OVERVIEW VIEW ───────────────────────────────────────────
+
+async function loadOverview() {
+  const { currentYear: y, currentMonth: m, user } = state;
+  const monthStr = `${y}-${String(m+1).padStart(2,"0")}`;
+  try {
+    const data = await sheetsGet(CONFIG.SHEETS.UREN + "!A2:H");
+    const entries = (data.values||[]).filter(r=>r[1]===user?.email && r[0]?.startsWith(monthStr));
+    const total = entries.reduce((s,r)=>s+(parseFloat(r[3])||0),0);
+    const byType = {};
+    entries.forEach(r=>{ byType[r[4]||"Onbekend"]=(byType[r[4]||"Onbekend"]||0)+(parseFloat(r[3])||0); });
+
+    const statsEl = document.getElementById("overview-stats");
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Totaal uren</div></div>
+      ${Object.entries(byType).map(([k,v])=>`<div class="stat-card"><div class="stat-val">${v}</div><div class="stat-lbl">${k}</div></div>`).join("")}
+    `;
+  } catch(e) { document.getElementById("overview-stats").innerHTML = `<div>Fout: ${e.message}</div>`; }
+}
+
+// ─── INVOICE VIEW ────────────────────────────────────────────
+
+function populateInvoiceControls() {
+  const clientSel = document.getElementById("inv-client");
+  const empSel = document.getElementById("inv-employee");
+  // Clients from projects
+  const clients = [...new Set(state.projects.map(p=>p.client).filter(Boolean))];
+  clientSel.innerHTML = `<option value="">— selecteer klant —</option>` +
+    clients.map(c=>`<option value="${c}">${c}</option>`).join("") +
+    state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");
+  // Employees
+  empSel.innerHTML = `<option value="">— alle medewerkers —</option>` +
+    state.employees.map(e=>`<option value="${e.email}">${e.name}</option>`).join("");
+
+  const now = new Date();
+  document.getElementById("inv-from").value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  document.getElementById("inv-to").value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  document.getElementById("inv-num").value = `${now.getFullYear()}-${String(Math.floor(Math.random()*999)+1).padStart(3,"0")}`;
+}
+
+async function generateInvoice() {
+  const client = document.getElementById("inv-client").value;
+  const empFilter = document.getElementById("inv-employee").value;
+  const from = document.getElementById("inv-from").value;
+  const to = document.getElementById("inv-to").value;
+  const invNum = document.getElementById("inv-num").value;
+
+  if (!client || !from || !to) return;
+
+  const preview = document.getElementById("invoice-preview");
+  preview.innerHTML = '<div style="color:var(--muted);padding:20px">Laden…</div>';
+
+  try {
+    const data = await sheetsGet(CONFIG.SHEETS.UREN + "!A2:H");
+    const allEntries = data.values || [];
+
+    // Filter op client, medewerker, periode, goedgekeurd
+    const matchProject = state.projects.filter(p => p.client===client || p.id===client).map(p=>p.id);
+    const filtered = allEntries.filter(r => {
+      const [date, email, project, , , , status] = r;
+      if (!date) return false;
+      const ym = date.slice(0,7);
+      if (ym < from || ym > to) return false;
+      if (!matchProject.includes(project) && project !== client) return false;
+      if (empFilter && email !== empFilter) return false;
+      if (status !== "approved") return false;
+      return true;
+    });
+
+    // Group by employee
+    const byEmp = {};
+    filtered.forEach(r => {
+      const [date, email, project, hours, type] = r;
+      if (!byEmp[email]) byEmp[email] = { hours: 0, entries: [] };
+      byEmp[email].hours += parseFloat(hours)||0;
+      byEmp[email].entries.push(r);
+    });
+
+    if (Object.keys(byEmp).length === 0) {
+      preview.innerHTML = '<div class="empty-state"><div class="big">€</div><div>Geen goedgekeurde uren gevonden voor deze selectie</div></div>';
+      return;
+    }
+
+    const fromFmt = from.split("-").reverse().slice(0,2).join("-");
+    const toFmt = to.split("-").reverse().slice(0,2).join("-");
+    let subtotal = 0;
+
+    const rows = Object.entries(byEmp).map(([email, val]) => {
+      const emp = state.employees.find(e=>e.email===email) || { name: email };
+      const rate = state.rates[email] || 0;
+      const amount = val.hours * rate;
+      subtotal += amount;
+      return `<tr>
+        <td>${emp.name}</td>
+        <td style="text-align:right">${val.hours}u</td>
+        <td style="text-align:right">€ ${rate.toFixed(2)}</td>
+        <td style="text-align:right">€ ${amount.toFixed(2)}</td>
+      </tr>`;
+    }).join("");
+
+    const btw = subtotal * 0.21;
+    const total = subtotal + btw;
+
+    const clientName = state.projects.find(p=>p.client===client || p.id===client)?.client || client;
+
+    preview.innerHTML = `
+      <div class="inv-header">
+        <div>
+          <div class="inv-title">Factuur</div>
+          <div style="margin-top:8px;font-size:12px;color:var(--muted)">Urenspecificatie · ${clientName}</div>
+        </div>
+        <div class="inv-meta">
+          <div><strong>Factuurnummer</strong><br>${invNum}</div>
+          <div style="margin-top:12px"><strong>Periode</strong><br>${from} t/m ${to}</div>
+          <div style="margin-top:12px"><strong>Datum</strong><br>${new Date().toLocaleDateString("nl-NL")}</div>
+        </div>
+      </div>
+
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Medewerker</th>
+            <th style="text-align:right">Uren</th>
+            <th style="text-align:right">Tarief</th>
+            <th style="text-align:right">Bedrag</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="3">Subtotaal</td><td style="text-align:right">€ ${subtotal.toFixed(2)}</td></tr>
+          <tr><td colspan="3">BTW 21%</td><td style="text-align:right">€ ${btw.toFixed(2)}</td></tr>
+          <tr class="inv-total-row">
+            <td colspan="3"><strong>Totaal</strong></td>
+            <td style="text-align:right"><strong>€ ${total.toFixed(2)}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div style="font-size:11px;color:var(--muted);margin-top:16px">
+        Betalingstermijn: 30 dagen · Alleen goedgekeurde uren worden gefactureerd.
+      </div>
+    `;
+  } catch(e) { preview.innerHTML = `<div class="empty-state">Fout: ${e.message}</div>`; }
+}
+
+function updateInvNum() {
+  // just re-render if already generated
+  generateInvoice();
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────
+
+function showView(id, btn) {
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("view-" + id).classList.add("active");
+  if (btn) btn.classList.add("active");
+
+  if (id === "approval") loadApproval();
+  if (id === "overview") loadOverview();
+  if (id === "timesheet") renderTimesheet();
+}
+
+function changeMonth(delta, isOverview=false, isApproval=false) {
+  state.currentMonth += delta;
+  if (state.currentMonth < 0) { state.currentMonth = 11; state.currentYear--; }
+  if (state.currentMonth > 11) { state.currentMonth = 0; state.currentYear++; }
+  updateMonthLabels();
+  if (isOverview) loadOverview();
+  else if (isApproval) loadApproval();
+  else { state.timesheetData = {}; loadTimesheet(); }
+}
+
+function updateMonthLabels() {
+  const lbl = `${MONTHS_NL[state.currentMonth]} ${state.currentYear}`;
+  document.getElementById("month-label").textContent = lbl;
+  document.getElementById("month-label-ov").textContent = lbl;
+  document.getElementById("month-label-ap").textContent = lbl;
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+
+let toastTimer;
+function toast(msg, type="") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show" + (type ? " "+type : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.className="", 3500);
+}
+
+function showConfigHelp() {
+  document.getElementById("config-modal").classList.add("open");
+}
+</script>
+</body>
+</html>
